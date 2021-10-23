@@ -1,0 +1,15 @@
+# chamando as libs necessárias
+pacman::p_load(tidyverse, magrittr, lubridate)
+
+df <- read_csv('data/data.csv')
+
+collect_by_month <- df |> group_by(Mês) |> 
+  summarise(total = n())
+
+p <- ggplot(collect_by_month, aes(Mês, total, fill= total)) + 
+  geom_bar(binwidth=1, stat='identity') + theme_light() +
+  scale_fill_gradient(low='red', high='blue', limits=c(0,200)) 
+
+
+p + theme(axis.text.x = element_text(angle=45, vjust = 1, hjust=1))+
+  coord_polar()
