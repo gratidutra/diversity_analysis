@@ -1,0 +1,93 @@
+---
+title: "GLM"
+output: html_notebook
+---
+
+```{r}
+# chamando as libs necessárias
+pacman::p_load(tidyverse, magrittr, lubridate, iNEXT, vegan, RAM)
+
+df <- read_csv("data/data.csv")
+```
+
+```{r}
+df_model <- df |> group_by(Mês, Espécie) |> 
+  summarise(total = n(),
+            temp = mean(`Temperatura (°C)`),
+            um = mean(`Umidade (%)`))
+
+head(df_model)
+```
+
+```{r}
+model1 <- glm(total ~ Mês*temp*um, data = df_model, family = 'poisson')
+
+summary(model1)
+```
+
+```{r}
+anova(model1)
+```
+
+```{r}
+model2 <- glm.nb(total ~ Mês*temp*um, data = df_model)
+
+summary(model2)
+```
+
+```{r}
+anova(model2)
+
+exp(cbind(OR = coef(m2.1), confint(m2.1)))
+```
+
+```{r}
+ajuste = c('model1', 'model2')
+
+aic    = c(AIC(model1), AIC(model2))
+
+verossimilhança = c(logLik(model1),logLik(model2))
+
+data.frame(ajuste, aic, verossimilhança)
+```
+
+```{r}
+#poisson
+
+hnp(model1, xlab = 'Percentil da N(0,1)', ylab = 'Resíduos', main = 'Gráfico Normal de Probabilidades')
+```
+
+```{r}
+# binomial negativa
+
+hnp(model2, xlab = 'Percentil da N(0,1)', ylab = 'Resíduos', main = 'Gráfico Normal de Probabilidades')
+```
+
+```{r}
+# melhorando o modelo
+m2.1 <- step(model2, direction = "both")
+
+summary(m2.1)
+
+```
+
+```{r}
+#devtools::install_github("cardiomoon/ggiraphExtra")
+pacman::p_load(ggfortify)
+
+hnp(m2.1)
+# teste <- autoplot(m2.1,2) 
+# 
+# 
+# teste+stat_smooth(method = "glm", col = "red")
+
+```
+
+```{r}
+anova(model2, m2.1)
+```
+
+```{r}
+exp(cbind(OR = coef(m2.1), confint(m2.1)))
+```
+
