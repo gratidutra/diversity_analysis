@@ -1,3 +1,8 @@
+# chamando as libs necessárias
+pacman::p_load(tidyverse, magrittr, lubridate, MASS, hnp)
+
+df <- read_csv("data/data.csv")
+
 df_model <- df |> group_by(Mês, Espécie) |> 
   summarise(total = n(),
             temp = mean(`Temperatura (°C)`),
@@ -8,8 +13,6 @@ model1 <- glm(total ~ Mês*temp*um, data = df_model, family = 'poisson')
 summary(model1)
 
 anova(model1)
-
-
 
 model2 <- glm.nb(total ~ Mês*temp*um, data = df_model)
 
@@ -29,13 +32,14 @@ verossimilhança = c(logLik(model1),logLik(model2))
 data.frame(ajuste, aic, verossimilhança)
 
 
-
 hnp(model1, xlab = 'Percentil da N(0,1)', ylab = 'Resíduos', main = 'Gráfico Normal de Probabilidades')
 
 hnp(model2, xlab = 'Percentil da N(0,1)', ylab = 'Resíduos', main = 'Gráfico Normal de Probabilidades')
 
 
 m2.1 <- step(model2, direction = "both")
+
+hnp(m2.1)
 
 summary(m2.1)
 
