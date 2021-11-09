@@ -1,5 +1,5 @@
 # chamando as libs necessárias
-pacman::p_load(tidyverse, magrittr, lubridate, iNEXT, vegan, RAM, permute,dplyr, nVennR)
+pacman::p_load(tidyverse, magrittr, lubridate, iNEXT, vegan, permute, dplyr, networkD3)
 
 df <- read_csv("../data/data_pcrs.csv")
 
@@ -12,11 +12,33 @@ distinct(df, Localidade)
 
 top_specie <- df %>% arrange(-Abundância) %>% slice(1:5)  
 
+
+# Sankey
+
+
+nodes <- data.frame(name = c(as.character(df$Espécie), as.character(df$Localidade)) %>% unique())
+
+
+df$IDsource <- match(df$Espécie, nodes$name) - 1
+df$IDtarget <- match(df$Localidade, nodes$name) - 1
+
+
+ColourScal <- 'd3.scaleOrdinal() .range(["#FDE725FF","#B4DE2CFF","#6DCD59FF","#35B779FF",
+"#1F9E89FF","#26828EFF","#31688EFF","#3E4A89FF","#482878FF","#440154FF"])'
+
+
+sankeyNetwork(
+  Links = df, Nodes = nodes,
+  Source = "IDsource", Target = "IDtarget",
+  Value = "Abundância", NodeID = "name",
+  sinksRight = FALSE, colourScale = ColourScal, nodeWidth = 40, fontSize = 13, nodePadding = 20
+)
+
+
 # NMDS
 
-df$Abundância[df$Abundância == 0] <- NA
-
-rich <- df  %>%  group_by(Localidade) %>% 
+rich <- df %>%
+  group_by(Localidade) %>%
   filter(Abundância > 0) %>%
   summarise(rich = n_distinct(Espécie))
 
@@ -25,7 +47,8 @@ data_nmds <- df %>%
   pivot_wider(names_from = Espécie, values_from = Abundância) %>%
   mutate(
     across(everything(), ~ replace_na(.x, 0))
-  ) %>% left_join(rich, by = "Localidade")
+  ) %>%
+  left_join(rich, by = "Localidade")
 
 
 run_nmds <- data_nmds
@@ -39,10 +62,10 @@ dist_bray
 
 nmds <- metaMDS(dist_bray)
 
-scores(nmds)  %>%
+scores(nmds) %>%
   as_tibble() %>%
   cbind(data_nmds) %>%
-  as_tibble()%>%
+  as_tibble() %>%
   ggplot(aes(x = NMDS1, y = NMDS2)) +
   geom_point(aes(size = rich)) +
   stat_ellipse(geom = "polygon", aes(group = rich), alpha = 0.3) +
@@ -65,8 +88,7 @@ ggplot(rich_abund, aes(x = rich, y = abund)) +
 
 # Diversidade
 
-abund <- df %>%
-  pivot_wider(names_from = Localidade, values_from = Abundância)  %>%
+abund <- read_csv("../data/data_pcrs.csv") %>%
     column_to_rownames(var = "Espécie")
 
 resultados_tabanidae <- iNEXT(abund,

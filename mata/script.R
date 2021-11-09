@@ -1,5 +1,5 @@
 # chamando as libs necessárias
-pacman::p_load(tidyverse, magrittr, lubridate, iNEXT, vegan, RAM, permute,dplyr)
+pacman::p_load(tidyverse, magrittr, lubridate, iNEXT, vegan, RAM, permute, dplyr)
 
 df <- read_csv("../data/data_mata.csv")
 df <- df %>% mutate(`Espécie` = case_when(`Espécie` == 'Tabanus antarcticus' ~ 'Tabanus antarticus',
@@ -20,37 +20,36 @@ df <- df %>% filter(`Espécie` != 'Família Syrphidae')
 
 # Diagrama de Venn
 
-count <- df %>% 
+count <- df %>%
   group_by(`Espécie`, Localidade) %>%
   summarise(total = n())
 
 p1 <- count %>%
-  filter(Localidade == 'P1 - Argeu') %>%
+  filter(Localidade == "P1 - Argeu") %>%
   select(Localidade, `Espécie`)
 
 p2 <- count %>%
-  filter(Localidade == 'P2- Hélio') %>%
+  filter(Localidade == "P2- Hélio") %>%
   select(Localidade, `Espécie`)
 
 p3 <- count %>%
-  filter(Localidade == 'P3 - Paulo Cabeça') %>%
+  filter(Localidade == "P3 - Paulo Cabeça") %>%
   select(Localidade, `Espécie`)
 
 p4 <- count %>%
-  filter(Localidade == 'P4 - Paulo Vicentino') %>%
+  filter(Localidade == "P4 - Paulo Vicentino") %>%
   select(Localidade, `Espécie`)
-
 
 p5 <- count %>%
-  filter(Localidade == 'P5 - Nelcivaldo') %>%
+  filter(Localidade == "P5 - Nelcivaldo") %>%
   select(Localidade, `Espécie`)
 
-
-
-group.venn(list(Argeu=p1$Espécie, `Hélio`=p2$Espécie, `Paulo Cabeça`=p3$Espécie, `Paulo Vicentino`=p4$Espécie, Neucivaldo=p5$Espécie), label=FALSE, 
-           fill = c("lightpink", "lightblue", "green", "red", "yelow"),
-           cat.pos = c(1, 1, 1, 1, 1),
-           cex = 1.8)
+group.venn(list(Argeu = p1$Espécie, `Hélio` = p2$Espécie, `Paulo Cabeça` = p3$Espécie, `Paulo Vicentino` = p4$Espécie, Neucivaldo = p5$Espécie),
+  label = FALSE,
+  fill = c("lightpink", "lightblue", "green", "red", "yelow"),
+  cat.pos = c(1, 1, 1, 1, 1),
+  cex = 1.8
+)
 
 
 # top 5 specie
@@ -212,10 +211,7 @@ resultados_tabanidae <- iNEXT(abund,
                               endpoint = 400
 )
 
-
-
-
-## Resultado
+# Resultado
 resultados_tabanidae$AsyEst
 
 ggiNEXT(resultados_tabanidae, type = 1, facet.var = 'order') + theme_light()
