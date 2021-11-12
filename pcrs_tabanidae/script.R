@@ -12,29 +12,6 @@ distinct(df, Localidade)
 
 top_specie <- df %>% arrange(-Abundância) %>% slice(1:5)  
 
-
-# Sankey
-
-
-nodes <- data.frame(name = c(as.character(df$Espécie), as.character(df$Localidade)) %>% unique())
-
-
-df$IDsource <- match(df$Espécie, nodes$name) - 1
-df$IDtarget <- match(df$Localidade, nodes$name) - 1
-
-
-ColourScal <- 'd3.scaleOrdinal() .range(["#FDE725FF","#B4DE2CFF","#6DCD59FF","#35B779FF",
-"#1F9E89FF","#26828EFF","#31688EFF","#3E4A89FF","#482878FF","#440154FF"])'
-
-
-sankeyNetwork(
-  Links = df, Nodes = nodes,
-  Source = "IDsource", Target = "IDtarget",
-  Value = "Abundância", NodeID = "name",
-  sinksRight = FALSE, colourScale = ColourScal, nodeWidth = 40, fontSize = 13, nodePadding = 20
-)
-
-
 # NMDS
 
 rich <- df %>%
@@ -102,5 +79,74 @@ resultados_tabanidae <- iNEXT(abund,
 
 resultados_tabanidae$AsyEst
 
-ggiNEXT(resultados_tabanidae, type = 1, facet.var = 'site') + theme_light() + 
+ggiNEXT(resultados_tabanidae, type = 1, facet.var = 'site') + 
+  theme_light() + 
   facet_wrap(~site, ncol=3, scales = 'free') 
+
+
+# Kmeans
+ncol(data_nmds)
+abundance <- rowSums(data_nmds[2:26])
+
+df_kmeans <- tibble(localidade = as.factor(data_nmds$Localidade),
+                    rich = data_nmds$rich,
+                    abundance = abundance) %>% column_to_rownames(var = "localidade")
+  
+
+# balanceando
+
+df_kmeans2 <- scale(df_kmeans)
+
+# regra do cotovelo 
+
+fviz_nbclust(df_kmeans, kmeans, method = "wss", k.max = 9)+
+  geom_vline(xintercept = 4, linetype = 2)
+
+set.seed(123)
+km.res = kmeans(df_kmeans, 3, nstart=25)
+print(km.res)
+
+aggregate(df_kmeans, by=list(cluster=km.res$cluster), mean)
+
+df_kmeans3=cbind(df_kmeans, cluster=km.res$cluster)
+df_kmeans3
+
+fviz_cluster(km.res, data=df_kmeans3,
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+             ellipse.type="euclid",
+             star.plot=TRUE,
+             repel=TRUE,
+             ggtheme=theme_minimal()
+)
+
+dista=dist(df_kmeans, method="euclidean")
+
+as.matrix(dista)[1:3,1:3]
+
+dista.hc=hclust(d=dista, method="ward.D")
+
+fviz_dend(dista.hc, cex=0.5)
+
+# Sankey
+
+nodes <- data.frame(name = c(as.character(df$Espécie), as.character(df$Localidade)) %>% unique())
+
+
+df$IDsource <- match(df$Espécie, nodes$name) - 1
+df$IDtarget <- match(df$Localidade, nodes$name) - 1
+
+df %<>% filter(Abundância > 0)
+
+ColourScal <- 'd3.scaleOrdinal() .range(["#FDE725FF","#B4DE2CFF","#6DCD59FF","#35B779FF",
+"#1F9E89FF","#26828EFF","#31688EFF","#3E4A89FF","#482878FF","#440154FF"])'
+
+
+sankeyNetwork(
+  Links = df, Nodes = nodes,
+  Source = "IDsource", Target = "IDtarget",
+  Value = "Abundância", NodeID = "name",
+  sinksRight = FALSE, colourScale = ColourScal, nodeWidth = 40, fontSize = 13, nodePadding = 20
+)
+
+
+
