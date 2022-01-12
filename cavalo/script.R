@@ -92,6 +92,20 @@ ggplot(collect_by_horse, aes(as.factor(hour), total, fill = total)) +
   xlab("Hour") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
+# Coletas por estação
+
+collect_by_station <- df %>% group_by(`Estação`, Espécie) %>%
+  summarise(total = n()) %>%
+  arrange(-total) %>%  filter(total >= 12)
+
+ggplot(collect_by_station, aes(`Estação`, total, fill = total)) +
+  geom_bar(binwidth = 1, stat = "identity") +
+  theme_light() +
+  scale_fill_gradient(low = "lightgray", high = "black") +
+  facet_wrap(~Espécie) +
+  ylab("Abundance") +
+  xlab("Month") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
 # NMDS
 
@@ -201,34 +215,63 @@ abund <- df %>%
   column_to_rownames(var = "Espécie")
 
 resultados_tabanidae <- iNEXT(abund,
-                              q = 0,
+                              q = c(0, 1, 2),
                               datatype = "abundance",
                               endpoint = 800
 )
 
-## Diagrama de Venn
-
-count <- df %>% 
-  group_by(`Espécie`, Localidade) %>%
-  summarise(total = n())
-
-p1 <- count %>%
-  filter(Localidade == 'P1 - Argeu') %>%
-  select(Localidade, `Espécie`)
-
-
-p5 <- count %>%
-  filter(Localidade == 'P5-Neucivaldo') %>%
-  select(Localidade, `Espécie`)
-
-
-group.venn(list(Argeu=p1$Espécie, Neucivaldo=p5$Espécie), label=FALSE, 
-           fill = c("lightpink", "lightblue"),
-           cat.pos = c(0, 0),
-           cex = 1.8)
-
 
 ## Resultado
-resultados_tabanidae$AsyEst
 
-ggiNEXT(resultados_tabanidae, type = 1) + theme_light()
+ggiNEXT(resultados_tabanidae, 
+        facet.var = "site", 
+        color.var = "order") + 
+  theme_light()
+
+
+
+# Partes cavalo -----------------------------------------------------------
+df <- read_csv("data/partes_cavalo.csv")
+df <- df %>% mutate(`Espécie` = case_when(
+  `Espécie` == "Tabanus antarcticus" ~ "Tabanus antarticus",
+  `Espécie` == "Tabaus antarcticus" ~ "Tabanus antarticus",
+  `Espécie` == "Tabanus occidentalis var. dorsovittatus" ~ "Tabanus occidentalis",
+  `Espécie` == "Tabanus occidentalis var. modestus" ~ "Tabanus occidentalis",
+  `Espécie` == "Tabaus occidentalis var. modestus" ~ "Tabanus occidentalis",
+  `Espécie` == "Tabanus occidentalis var.modestus" ~ "Tabanus occidentalis",
+  `Espécie` == "Tabanus occidentalis var. ?dorsovittatus" ~ "Tabanus occidentalis",
+  `Espécie` == "Tabanus rupripes" ~ "Tabanus rubripes",
+  `Espécie` == "Tabanus ?fuscofasciatus" ~ "Tabanus fuscofasciatus",
+  `Espécie` == "Tabanus occiedntalis" ~ "Tabanus occidentalis", TRUE ~ `Espécie`
+))
+
+unique(df$`Local de pouso...4`)
+
+df <- df %>% mutate(local_do_pouso_simplificado = case_when(`Local de pouso...4` == "Face" |
+                                                      `Local de pouso...4` == "Pescoço" |
+                                                      `Local de pouso...4` == "Narina" ~ "Cabeça",
+                                                      `Local de pouso...4` == "Barriga" |
+                                                      `Local de pouso...4` == "Aparelho genital"  ~ "Ventral",
+                                                      `Local de pouso...4` == "Rabo" |
+                                                      `Local de pouso...4` == "Quartela traseira"  ~ "Lombar",
+                                                      `Local de pouso...4` == "Perna dianteira" |
+                                                      `Local de pouso...4` == "Perna traseira"  ~ "Pernas",
+                                                      TRUE ~ 'Frontal'
+                                                      ))
+unique(df$local_do_pouso_simplificado)
+
+
+collect_by_horse <- df %>% group_by(local_do_pouso_simplificado) %>%
+  summarise(total = n()) %>%
+  arrange(-total) %>% filter(total >= 8)
+
+ggplot(df, aes(as.factor(local_do_pouso_simplificado),
+                                        fill = as.factor(local_do_pouso_simplificado))) +
+  geom_bar() +
+  theme_light() +
+  scale_fill_grey(start = 0.25, end = 0.75)+
+  ylab("Abundance") +
+  xlab("Hour") +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
