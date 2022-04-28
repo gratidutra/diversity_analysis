@@ -1,7 +1,7 @@
 # chamando as libs necessárias
 pacman::p_load(tidyverse, magrittr, lubridate, iNEXT, vegan, RAM, permute)
 
-df <- read_csv("data.csv")
+df <- read_csv("data/data.csv")
 df <-
   df %>%
   mutate(
@@ -70,7 +70,7 @@ collect_by_month <-
   group_by(Mês, Espécie, `Estação`) %>%
   summarise(total = n()) %>%
   arrange(-total) %>%
-  filter(total >= 12)
+  filter(Espécie %in% c('Tabanus antarticus','Stypommisa aripuana', 'Pityocera cervus'))
 
 collect_by_month$Mês <-
   factor(collect_by_month$Mês,
@@ -252,10 +252,10 @@ anova(model1)
 
 abund <-
   df %>%
-  group_by(Espécie, Localidade) %>%
+  group_by(Espécie, Estação) %>%
   summarise(total = n()) %>%
-  pivot_wider(names_from = Localidade, values_from = total) %>%
-  replace_na(list(`P1 - Argeu` = 0, `P5-Neucivaldo` = 0)) %>%
+  pivot_wider(names_from = Estação, values_from = total) %>%
+  replace_na(list(`Dry` = 0, Rainy = 0)) %>%
   column_to_rownames(var = "Espécie")
 
 resultados_tabanidae <-
