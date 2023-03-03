@@ -1,6 +1,7 @@
 # chamando as libs necessárias
-pacman::p_load(tidyverse, magrittr, lubridate, iNEXT, vegan, RAM, permute, dplyr)
-
+pacman::p_load(tidyverse, magrittr, lubridate, iNEXT, vegan, 
+               #RAM, 
+               permute, dplyr)
 df <- 
   read_csv("../data/data_mata.csv")
 
@@ -25,18 +26,18 @@ df <-
       TRUE ~ Localidade
     ),
     Mês = case_when(
-      Mês == "Janeiro" ~ "January",
-      Mês == "Fevereiro" ~ "February",
-      Mês == "Março" ~ "March",
-      Mês == "Abril" ~ "April",
+      Mês == "Janeiro" ~ "Jan",
+      Mês == "Fevereiro" ~ "Feb",
+      Mês == "Março" ~ "Mar",
+      Mês == "Abril" ~ "Apr",
       Mês == "Maio" ~ "May",
-      Mês == "Junho" ~ "June",
-      Mês == "Julho" ~ "July",
-      Mês == "Agosto" ~ "August",
-      Mês == "Setembro" ~ "September",
-      Mês == "Outubro" ~ "October",
-      Mês == "Novembro" ~ "November",
-      Mês == "Dezembro" ~ "December"
+      Mês == "Junho" ~ "Jun",
+      Mês == "Julho" ~ "Jul",
+      Mês == "Agosto" ~ "Aug",
+      Mês == "Setembro" ~ "Sep",
+      Mês == "Outubro" ~ "Oct",
+      Mês == "Novembro" ~ "Nov",
+      Mês == "Dezembro" ~ "Dec"
     )
   )
 
@@ -75,31 +76,35 @@ p5 <-
   filter(Localidade == "P5 - Nelcivaldo") %>%
   select(Localidade, `Espécie`)
 
-group.venn(list(Argeu = p1$Espécie, `Hélio` = p2$Espécie, `Paulo Cabeça` = p3$Espécie, `Paulo Vicentino` = p4$Espécie, Neucivaldo = p5$Espécie),
+group.venn(list(Argeu = p1$Espécie, 
+                `Hélio` = p2$Espécie, 
+                `Paulo Cabeça` = p3$Espécie, 
+                `Paulo Vicentino` = p4$Espécie, Neucivaldo = p5$Espécie),
   label = FALSE,
   fill = c("lightpink", "lightblue", "green", "red", "yelow"),
   cat.pos = c(1, 1, 1, 1, 1),
   cex = 1.8
 )
+
 # top 5 specie
 
-top_specie <- df %>% group_by(Espécie) %>%
+top_specie <- df %>% 
+  group_by(Espécie) %>%
   summarise(total = n()) %>%
   arrange(-total) %>% slice(1:5)  
 
 # Coletas por mês
 
-collect_by_month <- 
-  df %>% group_by(Mês, Espécie) %>%
+collect_by_month <- df %>% group_by(Mês, Espécie) %>%
   summarise(total = n()) %>%
   arrange(-total) %>%  filter(total >= 12)
 
 collect_by_month$Mês <-
   factor(collect_by_month$Mês,
-         levels = c("November", "December", "January", 
-                    "February", "March", "April", "May",
-                    "June", "July", "August", "September",
-                    "October")
+         levels = c("Nov", "Dec", "Jan", 
+                    "Feb", "Mar", "Apr", "May",
+                    "Jun", "Jul", "Aug", "Sept",
+                    "Oct")
   )
 
 ggplot(collect_by_month, aes(Mês, total, fill = total)) +
@@ -123,20 +128,21 @@ df %>%
   facet_wrap(~Localidade)
 
 
-# NMDS
+# NMDS - 1 
 
-rich <- 
-  df  %>%  
-  group_by(Localidade, Mês) %>%
-  summarise(rich = n_distinct(Espécie))
+# rich <- 
+#   df  %>%  
+#   group_by(Localidade, Mês) %>%
+#   summarise(rich = n_distinct(Espécie))
 
 data_nmds <- 
   df %>%
   group_by(Espécie, Localidade, Mês) %>%
   summarise(abund = n()) %>%
   pivot_wider(names_from = Espécie, values_from = abund) %>%
-  replace(is.na(.), 0) %>% 
-  left_join(rich, by = c("Localidade", "Mês"))
+  replace(is.na(.), 0) 
+# %>% 
+#   left_join(rich, by = c("Localidade", "Mês"))
 
 
 run_nmds <- 
@@ -144,7 +150,7 @@ run_nmds <-
 
 run_nmds$Localidade <- NULL
 run_nmds$Mês <- NULL
-run_nmds$rich <- NULL
+#run_nmds$rich <- NULL
 
 dist_bray <- 
   vegdist(run_nmds, method = "bray", binary = TRUE)
@@ -159,9 +165,97 @@ scores(nmds)  %>%
   cbind(data_nmds) %>%
   as_tibble()%>%
   ggplot(aes(x = NMDS1, y = NMDS2)) +
-  geom_point(aes(size = rich, color = Mês)) +
+  geom_point(aes(color = Mês)) +
   stat_ellipse(geom = "polygon", aes(group = Mês, color = Mês, fill = Mês), alpha = 0.3) +
   annotate("text", x = -2, y = 0.95, label = paste0("stress: ", format(nmds$stress, digits = 4)), hjust = 0) +
+  theme_bw()
+
+# Permanova
+
+adonis(dist_bray~data_nmds$Localidade, permutations = 1000)
+
+
+# NMDS - 2 
+
+data_nmds <- 
+  df %>%
+  group_by(Espécie, Localidade, Mês) %>%
+  summarise(abund = n()) %>%
+  pivot_wider(names_from = Espécie, values_from = abund) %>%
+  replace(is.na(.), 0)
+
+
+run_nmds <- 
+  data_nmds
+
+run_nmds$Localidade <- NULL
+run_nmds$Mês <- NULL
+#run_nmds$rich <- NULL
+
+dist_bray <- 
+  vegdist(run_nmds, method = "bray", binary = TRUE)
+
+dist_bray
+
+nmds <- 
+  metaMDS(dist_bray)
+
+scores(nmds)  %>%
+  as_tibble() %>%
+  cbind(data_nmds) %>%
+  as_tibble()%>%
+  ggplot(aes(x = NMDS1, y = NMDS2)) +
+  geom_point(aes(color = Localidade)) +
+  stat_ellipse(geom = "polygon", 
+               aes(group = Localidade, color = Localidade, fill = Localidade), 
+               alpha = 0.3) +
+  annotate("text", x = -10, y = 3, label = paste0("stress: ", 
+                                                  format(nmds$stress, digits = 8)), hjust = 0) +
+  theme_bw()
+
+# Permanova
+
+adonis(dist_bray~data_nmds$Localidade, permutations = 1000)
+
+
+# NMDS - 3 
+
+data_nmds <- 
+  df %>%
+  group_by(Espécie, Armadilha, Mês) %>%
+  summarise(abund = n()) %>%
+  pivot_wider(names_from = Espécie, values_from = abund) %>%
+  replace(is.na(.), 0)
+
+
+run_nmds <- 
+  data_nmds
+
+run_nmds$Armadilha <- NULL
+run_nmds$Localidade.x <- NULL
+run_nmds$Localidade.y <- NULL
+run_nmds$Localidade <- NULL
+run_nmds$rich <- NULL
+run_nmds$Mês <- NULL
+
+dist_bray <- 
+  vegdist(run_nmds, method = "bray", binary = TRUE)
+
+dist_bray
+
+nmds <- 
+  metaMDS(dist_bray)
+
+scores(nmds)  %>%
+  as_tibble() %>%
+  cbind(data_nmds) %>%
+  as_tibble()%>%
+  ggplot(aes(x = NMDS1, y = NMDS2)) +
+  geom_point(aes(color = Armadilha)) +
+  stat_ellipse(geom = "polygon", 
+               aes(group = Armadilha, color = Armadilha, fill = Armadilha), 
+               alpha = 0.3) +
+  annotate("text", x = -10, y = 3, label = paste0("stress: ", format(nmds$stress, digits = 3)), hjust = 0) +
   theme_bw()
 
 # Permanova
@@ -215,12 +309,13 @@ ggplot(df_climatics, aes(x = pre, y = total)) +
 # Rich x Abund
 
 data_rich <- df %>%
-  group_by(Localidade, Mês) %>%
+  group_by(Mês) %>%
   summarise(temp = mean(as.numeric(`Temperatura média (°C)`)),
             um = mean(as.numeric(`Umidade média (%)`)),
             or = mean(as.numeric(`Pto. Orvalho média (°C)`)),
             pre = mean(as.numeric(`Pressão média (hPa)`)),
-            rich = n_distinct(`Espécie`))
+            rich = n_distinct(`Espécie`),
+            abund = n())
 
 data_rich[4,3] <- 25.36
 data_rich
@@ -234,12 +329,12 @@ ggplot(data_rich, aes(x = temp , y = rich)) +
 
 # Modelo 1
 
-model1 <- glm(data = data_rich, rich ~ Mês*temp*um*or*pre, family = poisson)
+model1 <- glm(data = data_rich, 
+              rich ~ Mês*temp*um*or*pre, family = poisson)
 
 summary(model1)
 
 anova(model1)
-
 
 # Diversidade
 
@@ -261,4 +356,4 @@ resultados_tabanidae <- iNEXT(abund,
 
 resultados_tabanidae$AsyEst
 
-ggiNEXT(resultados_tabanidae, type = 1, facet.var = 'order') + theme_light()
+ggiNEXT(resultados_tabanidae, type = 1, facet.var = 'Order') + theme_light()
